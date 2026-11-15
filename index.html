@@ -303,6 +303,24 @@ input,select{font:inherit}
   .stn{min-height:74px;border-radius:12px;font-size:.7em;padding:6px 1px 5px}
   .stn svg{width:40px;height:40px}
 }
+.ctxbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:color-mix(in srgb,var(--blue) 12%,var(--card));border:1.5px solid var(--blue);border-radius:12px;padding:8px 10px;margin-bottom:8px;font-size:.92em}
+.ctxbar .btn{min-height:34px;padding:4px 10px;margin-left:auto}
+.ctxbar.plain{background:var(--card2);border:1px solid var(--line);color:var(--muted);padding:6px 10px;font-size:.85em}
+.jarbox{background:var(--card2);border:1px dashed var(--line);border-radius:12px;padding:8px 10px;font-size:.9em;margin-bottom:4px}
+.pbtn.need{outline:3px solid var(--accent);position:relative}
+.pbtn.need::after{content:"★";position:absolute;top:2px;right:6px;color:var(--warn);font-size:12px}
+.pbtn .have{color:var(--ok);font-weight:800}
+.shelf h4{margin-top:10px}
+/* tips */
+.tip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:10px}
+.tip{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.tip h3{margin:0;font-size:1.05em;display:flex;gap:8px;align-items:center}
+.tip h3 .e{font-size:1.5em}
+.tip ul{margin:0;padding-left:18px;line-height:1.6;font-size:.92em}
+.tip b{color:var(--hot)}
+.tip .row{margin-top:auto}
+.tipbox{background:var(--warn-bg);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:.88em}
+.tipbox ul{margin:4px 0 0;padding-left:18px;line-height:1.55}
 .mg-stage{display:flex;flex-direction:column;align-items:center;background:linear-gradient(180deg,transparent 60%,rgba(120,80,40,.10));border-radius:14px;margin:6px 0}
 .mg-stage svg{width:min(240px,62vw);height:auto;display:block}
 .mg-read{min-height:24px;font-weight:700;text-align:center;color:var(--muted)}
@@ -333,6 +351,7 @@ input,select{font:inherit}
       <button class="menu-btn main" id="mStart"><div class="ic">🕕</div><div><b id="mStartTitle">근무 시작</b><span id="mStartSub">주말 마감</span></div></button>
       <button class="menu-btn" id="mPractice"><div class="ic">🧪</div><div><b>연습 모드</b><span>시간 제한 없이 메뉴별로 만들어보기</span></div></button>
       <button class="menu-btn" id="mQuiz"><div class="ic">📝</div><div><b>레시피 퀴즈</b><span>10문제 · 컵/샷/시럽/순서</span></div></button>
+      <button class="menu-btn" id="mTips"><div class="ic">🍯</div><div><b>외우기 꿀팁</b><span>헷갈리는 규칙 정리 + 꿀팁 퀴즈</span></div></button>
       <button class="menu-btn" id="mBook"><div class="ic">📖</div><div><b>레시피북</b><span>전 메뉴 · 컵 라인 · 베이스 · 텀블러</span></div></button>
       <button class="menu-btn" id="mClose"><div class="ic">🧹</div><div><b>마감 연습</b><span>마감 청소 순서 + 보관기한</span></div></button>
       <button class="menu-btn" id="mSettings"><div class="ic">⚙️</div><div><b>설정 · 도움말</b><span>마감 시간, 손님 수, 난이도</span></div></button>
@@ -389,6 +408,14 @@ input,select{font:inherit}
 <section id="scr-book" class="screen"><div class="wrap">
   <div class="row" style="margin-bottom:10px"><button class="btn" data-home>← 메인</button><h2 style="margin:0">📖 레시피북</h2></div>
   <div id="bookRoot"></div>
+</div></section>
+
+<!-- ================= TIPS ================= -->
+<section id="scr-tips" class="screen"><div class="wrap">
+  <div class="row" style="margin-bottom:6px"><button class="btn" data-home>← 메인</button><h2 style="margin:0">🍯 외우기 꿀팁</h2></div>
+  <p class="muted small" style="margin:0">레시피 119개를 하나씩 외우지 말고, 규칙으로 묶어서 외워요. 카드마다 그 규칙만 나오는 5문제 퀴즈가 있어요.</p>
+  <div class="row" style="margin-top:10px"><button class="btn primary" id="tipAll">🎲 꿀팁 랜덤 퀴즈 10문제</button></div>
+  <div class="tip-grid" id="tipRoot"></div>
 </div></section>
 
 <!-- ================= QUIZ ================= -->
@@ -646,7 +673,8 @@ const RAW=[
 const CATS=['에스프레소','커피','차','논커피 라떼','에이드','스무디·프라페','흑당','주스','콜드브루','꿀팁옵션'];
 const UNLOCK=[['커피','에스프레소'],['차','에이드'],['논커피 라떼','콜드브루'],['스무디·프라페'],['흑당','주스','꿀팁옵션']];
 
-function collapse(t){const o=[];t.forEach(x=>{if(x&&x!=='컵'&&x!=='예열'&&o[o.length-1]!==x)o.push(x)});return o;}
+/* 채점용 순서에서 '컵'·'예열'·'스팀'은 빼요 (스팀은 '스팀우유 붓기' 한 번에 처리) */
+function collapse(t){const o=[];t.forEach(x=>{if(x&&x!=='컵'&&x!=='예열'&&x!=='스팀'&&o[o.length-1]!==x)o.push(x)});return o;}
 function parseRec(a){
   const [no,cat,temp,name,price,cup,shots,ice,blend,liq,ing,top,ok,memo]=a;
   const r={no,cat,temp,name,price,cup:String(cup),shots,ice,blend,memo:memo||'',okey:ok};
@@ -1056,6 +1084,7 @@ function serve(){
   const title={perfect:'완벽해요! 레시피 그대로!',ok:'아쉽지만 통과',fail:'다시 만들어야 해요'}[res.verdict];
   const html=`<div class="verdict"><div class="em">${em}</div><div><b>${title} (${res.pct}점)</b><span class="muted small">${tempBadge(r)} ${esc(r.name)}${o.extra?' · 샷추가':''}${usedHint?' · 💡힌트 사용':''}</span>${line?`<div class="small">${line}</div>`:''}${money}</div></div>
    <div class="checks">${res.checks.map(c=>`<div class="ck ${c.ok?'ok':'bad'}"><span class="m">${c.ok?'✔':'✘'}</span><b>${c.name}</b><div class="d">${c.ok?`<div>${esc(c.name==='순서'?'순서 OK':c.exp)}</div>`:`<div class="ex">정답: ${esc(c.exp)}</div><div class="gt">내가: ${esc(c.got)}</div>`}</div></div>`).join('')}</div>
+   ${res.verdict!=='perfect'?tipFor(r,res):''}
    <details ${res.verdict==='perfect'?'':'open'}><summary class="small muted" style="cursor:pointer;margin-bottom:6px">📋 레시피 카드 보기</summary>${recCard(r)}</details>
    <div class="row end" style="margin-top:12px">${G.mode==='practice'?`<button class="btn" id="rsRetry">같은 메뉴 다시</button><button class="btn primary" id="rsNext">다음 메뉴 →</button>`:`<button class="btn primary" id="rsNext">${res.verdict==='fail'?'다시 만들기':'다음 손님'}</button>`}</div>`;
   openModal(html,{pause:true,onClose:afterServe});
@@ -1204,12 +1233,16 @@ function stBadge(t){if(!B)return '';
 function renderStations(){const g=$('#stationGrid');if(!g)return;
   g.innerHTML=STATIONS.map(([t,l])=>`<button class="stn" data-stn="${t}">${stBadge(t)}${stArt(t)}<span>${l}</span></button>`).join('');
   g.querySelectorAll('[data-stn]').forEach(b=>b.onclick=()=>{if(!B)return toast('손님을 먼저 눌러 주문을 골라요');openStation(b.dataset.stn);});}
-function openStation(t){if(!B)return;B.tab=t;
-  openModal(`<div class="st-head">${stArt(t,44)}<h3>${ST_TITLE[t]}</h3><button class="btn ghost" data-close aria-label="닫기">✕</button></div><div id="panel"></div>`,{sheet:true,pause:false});
+/* 기본은 항상 '컵'에 넣어요. 샷잔·블렌더·계량컵은 각 기계 화면 안의 버튼으로만 들어가요 */
+function openStation(t,ctx){if(!B)return;B.tab=t;B.target=ctx&&ctx.target||'컵';B.back=ctx&&ctx.back||null;
+  const note=B.target!=='컵'?`<div class="ctxbar">${TGT_ICON[B.target]} 지금 <b>${B.target}</b>에 넣는 중이에요 <button class="btn ghost" data-back>← ${B.back}로 돌아가기</button></div>`:'';
+  openModal(`<div class="st-head">${stArt(t,44)}<h3>${ST_TITLE[t]}</h3><button class="btn ghost" data-close aria-label="닫기">✕</button></div>${note}<div id="panel"></div>`,{sheet:true,pause:false,onClose:()=>{if(B){B.target='컵';B.back=null;}}});
+  const bk=$('#modalBox [data-back]');if(bk)bk.onclick=()=>openStation(B.back);
   renderPanel();}
+function goBack(){const bk=B&&B.back;if(bk)setTimeout(()=>{if(!modalOpen())openStation(bk);},60);}
 
 function vesselHtml(name,icon,content,targetable){
-  const on=B.target===name;
+  const on=false;
   return `<button class="vessel ${on?'target':''} ${targetable?'':'info'}" ${targetable?`data-tg="${name}"`:''}><span class="vi">${icon}</span><span><b>${name} ${on?'<span class="tgt">◀ 넣을 곳</span>':''}</b><span class="vc">${content||'비어있음'}</span></span></button>`;
 }
 function contentStr(v){const p=[];if(v.shots)p.push(v.shots+'샷');Object.keys(v.ing||{}).forEach(k=>p.push(itemStr(k,v.ing[k])));(v.liq||[]).forEach(l=>p.push(l.t+' '+l.a));if(v.iceF)p.push('얼음 '+v.iceL);if(v.mixed)p.push('✓믹싱');if(v.steeped)p.push('✓우림');
@@ -1220,10 +1253,11 @@ function renderWork(){
   const r=o.rec;
   $('#nowMaking').innerHTML=`<span class="small muted">지금 제조</span> ${tempBadge(r)} <span class="nm">${esc(r.name)}</span>${o.extra?'<span class="badge red">+샷추가</span>':''}<span class="badge tag">${o.type}</span>`;
   const cupC=B.cup?[B.c.shots?B.c.shots+'샷':'',...Object.keys(B.c.ing).map(k=>itemStr(k,B.c.ing[k])),...B.c.liq.map(l=>l.t+' '+l.a),B.c.iceL?'얼음 '+B.c.iceL:'',B.c.blIceL?'(블렌더 얼음 '+B.c.blIceL+')':'',B.lid?'🔒뚜껑':'',B.bag?'🛍봉투':'',...Object.keys(B.c.top).map(k=>'🍒'+k+(B.c.top[k]>1?'×'+B.c.top[k]:''))].filter(Boolean).join(', '):'컵 없음';
-  let h=vesselHtml('컵',TGT_ICON['컵'],(B.cup?`<b>${CUPS[B.cup]}</b> `:'')+esc(cupC),true)+
-    vesselHtml('샷잔',TGT_ICON['샷잔'],esc(contentStr(B.sg)),true)+
-    vesselHtml('블렌더',TGT_ICON['블렌더'],esc(contentStr(B.bl)),true)+
-    vesselHtml('계량컵',TGT_ICON['계량컵'],esc(contentStr(B.mc)),true);
+  const sgS=contentStr(B.sg),blS=contentStr(B.bl),mcS=contentStr(B.mc);
+  let h=vesselHtml('컵',TGT_ICON['컵'],(B.cup?`<b>${CUPS[B.cup]}</b> `:'')+esc(cupC),false)+
+    (sgS?vesselHtml('샷잔',TGT_ICON['샷잔'],esc(sgS),false):'')+
+    (blS?vesselHtml('블렌더',TGT_ICON['블렌더'],esc(blS),false):'')+
+    (mcS?vesselHtml('계량컵',TGT_ICON['계량컵'],esc(mcS),false):'');
   if(B.pit||B.froth)h+=`<div class="vessel info"><span class="vi">🥛</span><span><b>스팀피처 / 거품기</b><span class="vc">${B.pit?`${B.pit.m} ${B.pit.used?'(부음)':B.pit.ml+' · '+Math.round(B.pit.temp)+'℃'}`:'—'}${B.froth?' · 우유거품 준비됨':''}</span></span></div>`;
   if(B.jobs.length)h+=`<div class="vessel info jobs"><span class="vi">⏳</span><span><b>기계 작동 중</b><span class="vc" id="jobLine">${jobsStr(B)}</span></span></div>`;
   if(B.spill)h+=`<button class="vessel info spill" data-wipe><span class="vi">💦</span><span><b>카운터에 흘렸어요!</b><span class="vc">눌러서 행주로 닦기</span></span></button>`;
@@ -1236,7 +1270,70 @@ function renderWork(){
 }
 
 /* ---------- cup SVG ---------- */
-function drawCup(){
+function drawCup(){const svg=$('#cupSvg');
+  if(!B||!B.cup){svg.innerHTML=`<ellipse cx="100" cy="236" rx="80" ry="7" fill="#000" opacity=".08"/><text x="100" y="130" text-anchor="middle" font-size="14" fill="currentColor" opacity=".5">'컵' 작업대에서</text><text x="100" y="150" text-anchor="middle" font-size="14" fill="currentColor" opacity=".5">컵을 꺼내주세요</text>`;return;}
+  svg.innerHTML=cupArt(B.cup,{layers:B.c.layers,iceF:B.c.iceF,top:B.c.top,lid:B.lid,labels:showLabels(),id:'mainc'});
+}
+/* 실제 매장 컵 그림: 투명 PET 아이스컵(선 인쇄) / 종이 핫컵(슬리브) / 에스프레소잔 */
+function cupArt(cup,o={}){
+  const g=cupGeom(cup),bot=232,h=bot-g.top,cx=100,id=o.id||'cc';
+  const X=(f,sd)=>cx+sd*(g.bw+(g.tw-g.bw)*clamp(f,0,1))/2,Y=f=>bot-f*h;
+  const poly=(a,b)=>`${X(b,-1)},${Y(b)} ${X(b,1)},${Y(b)} ${X(a,1)},${Y(a)} ${X(a,-1)},${Y(a)}`;
+  const full=poly(0,1);const isHot=cup==='HOT',isEsp=cup==='ESP',isIce=!isHot&&!isEsp;
+  const L=o.layers||[];const lv=L.length?L[L.length-1].f:0;const topCol=L.length?L[L.length-1].col:'#ccc';
+  let s=`<defs><clipPath id="${id}"><polygon points="${full}"/></clipPath>
+   <linearGradient id="${id}g" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".12" stop-color="#fff" stop-opacity=".15"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset=".9" stop-color="#7f9cb3" stop-opacity=".12"/><stop offset="1" stop-color="#7f9cb3" stop-opacity=".35"/></linearGradient>
+   <linearGradient id="${id}p" x1="0" x2="1"><stop offset="0" stop-color="#e9e4dc"/><stop offset=".25" stop-color="#ffffff"/><stop offset=".75" stop-color="#f6f2ec"/><stop offset="1" stop-color="#d9d2c6"/></linearGradient></defs>`;
+  s+=`<ellipse cx="${cx}" cy="${bot+5}" rx="${g.bw/2+16}" ry="7" fill="#000" opacity=".13"/>`;
+  if(isEsp)s+=`<ellipse cx="100" cy="${bot+3}" rx="62" ry="10" fill="#f7f4ef" stroke="#2a1c12" stroke-opacity=".35" stroke-width="2"/><ellipse cx="100" cy="${bot+1}" rx="34" ry="5" fill="#e9e3da"/>`;
+  if(isIce){
+    s+=`<polygon points="${full}" fill="#eaf4fa" fill-opacity=".35"/>`;
+    s+=`<g clip-path="url(#${id})">`;
+    let prev=0;L.forEach(l=>{s+=`<rect x="0" y="${Y(l.f)}" width="200" height="${Y(prev)-Y(l.f)+.6}" fill="${l.col}"/>`;prev=l.f;});
+    if(o.iceF){const fi=Math.min(1,o.iceF);let k=0;for(let yy=bot-14;yy>Y(fi)-4;yy-=16){const row=Math.round((bot-yy)/16);for(let xx=X(0,-1)-12+(row%2?8:0);xx<X(1,1);xx+=19){k++;const r=((k*53)%23)-11;const w=13+(k%3);
+      s+=`<g transform="rotate(${r} ${xx+w/2} ${yy+w/2})"><rect x="${xx}" y="${yy-2}" width="${w}" height="${w}" rx="3.5" fill="#f4fbff" fill-opacity=".55" stroke="#a9d3ee" stroke-width="1.3"/><path d="M${xx+3} ${yy+1} h${w-7}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/></g>`;}}}
+    if(lv>.02){const w=(X(lv,1)-X(lv,-1))/2;s+=`<ellipse cx="${cx}" cy="${Y(lv)}" rx="${w}" ry="4.5" fill="${topCol}"/><ellipse cx="${cx}" cy="${Y(lv)}" rx="${w}" ry="4.5" fill="#fff" opacity=".22"/>`;}
+    s+=`</g>`;
+    // 바닥 두께 + 바닥 홈
+    s+=`<path d="M${X(0,-1)} ${bot} Q${cx} ${bot+8} ${X(0,1)} ${bot}" fill="none" stroke="#2a1c12" stroke-opacity=".35" stroke-width="2"/>`;
+    for(let i=0;i<7;i++){const fx=X(0,-1)+8+i*(g.bw-16)/6;s+=`<path d="M${fx} ${bot-1} v-9" stroke="#9fb7c9" stroke-width="1.2" opacity=".6"/>`;}
+    // 인쇄된 로고(일반 카페 마크) + 선
+    const ly=Y(.3);s+=`<g opacity=".9"><circle cx="${cx-16}" cy="${ly}" r="14" fill="#2a64c9"/><path d="M${cx-24} ${ly-5} h13 l-2 12 h-9 z" fill="#fff"/><path d="M${cx-11} ${ly-2} q5 0 4 4 q-1 3 -5 3" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M${cx-21} ${ly-9} q-2 -3 1 -5 M${cx-16} ${ly-9} q-2 -3 1 -5" stroke="#fff" stroke-width="1.4" fill="none"/></g>`;
+    (SHOW_LINES[cup]||[]).forEach(n=>{const f=LINE_F[cup][n],y=Y(f);s+=`<line x1="${X(f,1)-30}" y1="${y}" x2="${X(f,1)-5}" y2="${y}" stroke="#2a64c9" stroke-width="2.2" stroke-linecap="round"/>`;
+      if(o.labels)s+=`<text x="${X(f,1)-33}" y="${y+3.5}" text-anchor="end" font-size="9.5" font-weight="800" fill="#2a64c9">${n}</text>`;});
+    s+=`<text x="${cx+22}" y="${Y(.12)}" text-anchor="middle" font-size="9" font-weight="800" fill="#2a64c9" opacity=".8">${cup}oz</text>`;
+    s+=`<polygon points="${full}" fill="url(#${id}g)"/>`;
+    s+=`<polygon points="${full}" fill="none" stroke="#2a1c12" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"/>`;
+    // 말린 테두리(림)
+    s+=`<ellipse cx="${cx}" cy="${g.top}" rx="${g.tw/2+3}" ry="6" fill="none" stroke="#2a1c12" stroke-opacity=".5" stroke-width="2.4"/><ellipse cx="${cx}" cy="${g.top}" rx="${g.tw/2}" ry="4" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="1.5"/>`;
+  }else{
+    // 종이컵 / 도자기잔
+    s+=`<polygon points="${full}" fill="url(#${id}p)" stroke="#2a1c12" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"/>`;
+    if(isHot){
+      s+=`<polygon points="${poly(.8,.9)}" fill="#3b2416"/><polygon points="${poly(.9,.92)}" fill="#ffbe1a"/>`;
+      s+=`<polygon points="${poly(.22,.64)}" fill="#c89b6a" stroke="#8a5a30" stroke-width="1.5"/>`;
+      for(let f=.25;f<.63;f+=.035)s+=`<line x1="${X(f,-1)+2}" y1="${Y(f)}" x2="${X(f,1)-2}" y2="${Y(f)}" stroke="#a87a4a" stroke-width="1" opacity=".6"/>`;
+      s+=`<text x="${cx}" y="${Y(.43)+4}" text-anchor="middle" font-size="11" font-weight="900" fill="#5b3416" letter-spacing="2">HOT</text>`;
+      if(o.labels)['9부','8부'].forEach(n=>{const f=LINE_F.HOT[n],y=Y(f);s+=`<line x1="${X(f,1)-16}" y1="${y}" x2="${X(f,1)-3}" y2="${y}" stroke="#2a64c9" stroke-dasharray="3 2" stroke-width="1.6"/><text x="${X(f,1)-19}" y="${y+3}" text-anchor="end" font-size="8.5" font-weight="800" fill="#2a64c9">${n}</text>`;});
+    }else{s+=`<path d="M${X(.75,1)} ${Y(.75)} q24 4 6 34" fill="none" stroke="#2a1c12" stroke-opacity=".45" stroke-width="6"/><path d="M${X(.75,1)} ${Y(.75)} q24 4 6 34" fill="none" stroke="#fbfaf7" stroke-width="3"/>`;}
+    // 위에서 보이는 음료 표면
+    s+=`<ellipse cx="${cx}" cy="${g.top+1}" rx="${g.tw/2}" ry="6" fill="${lv>.02?topCol:'#efe9df'}" stroke="#2a1c12" stroke-opacity=".5" stroke-width="2.2"/>`;
+    if(lv>.02&&lv<.7)s+=`<ellipse cx="${cx}" cy="${g.top+1}" rx="${g.tw/2}" ry="6" fill="#efe9df" opacity="${(.7-lv)*1.3}"/>`;
+    s+=`<ellipse cx="${cx}" cy="${g.top}" rx="${g.tw/2+3}" ry="7" fill="none" stroke="#f7f4ef" stroke-width="3"/>`;
+  }
+  // 토핑
+  const T=o.top||{};const surfY=isIce?Y(Math.max(lv,.06)):g.top;const hasWhip=T['일반휘핑'];
+  if(hasWhip){const w=g.tw/2-8;s+=`<g fill="#fffaf2" stroke="#e1d3bb" stroke-width="2"><ellipse cx="${cx}" cy="${g.top-2}" rx="${w}" ry="10"/><ellipse cx="${cx}" cy="${g.top-12}" rx="${w*.72}" ry="10"/><ellipse cx="${cx}" cy="${g.top-21}" rx="${w*.42}" ry="8"/><path d="M${cx-4} ${g.top-28} q4 -8 8 0" /></g>`;}
+  const topY=hasWhip?g.top-26:surfY-2;
+  if(T['카라멜드리즐']||T['초코드리즐']){const c=T['초코드리즐']?'#4a2414':'#c07a24';s+=`<path d="M${cx-30} ${topY} l8 -5 l8 5 l8 -5 l8 5 l8 -5 l8 5 l8 -5" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;}
+  if(T['애플민트']||T['로즈마리'])s+=`<ellipse cx="${cx+18}" cy="${topY-5}" rx="9" ry="5" fill="#3f9b45" transform="rotate(-25 ${cx+18} ${topY-5})"/><ellipse cx="${cx+28}" cy="${topY-7}" rx="8" ry="4" fill="#5cbf62" transform="rotate(25 ${cx+28} ${topY-7})"/>`;
+  ['레몬슬라이스','자몽슬라이스'].forEach((k,i)=>{if(T[k])s+=`<circle cx="${cx-22+i*14}" cy="${topY-3}" r="10" fill="${i?'#f39a7e':'#f6dc58'}" stroke="#fff" stroke-width="2.5"/><path d="M${cx-22+i*14} ${topY-12} v18 M${cx-31+i*14} ${topY-3} h18" stroke="#fff" stroke-width="1" opacity=".7"/>`;});
+  ['시나몬파우더','코코아파우더','녹차파우더','아몬드슬라이스','쿠키분태','딸기분태','코코넛칩','죠리퐁 가득','허니퍼프시리얼 가득','에스프레소 큐브','오레오','오레오(컷팅)','초코젤라또','식힌 샷','티백'].forEach((k,i)=>{if(T[k]){const c=colOf(k);for(let j=0;j<7;j++)s+=`<circle cx="${cx-30+((i*13+j*11)%62)}" cy="${topY-2-(j%3)*3}" r="${/가득|큐브|젤라또|오레오/.test(k)?5:2.4}" fill="${c}"/>`;}});
+  if(o.lid){if(isIce)s+=`<ellipse cx="${cx}" cy="${g.top-2}" rx="${g.tw/2+5}" ry="8" fill="#eef6fb" fill-opacity=".85" stroke="#2a1c12" stroke-opacity=".5" stroke-width="2"/><path d="M${cx-5} ${g.top-2} h10 M${cx} ${g.top-6} v8" stroke="#2a1c12" stroke-width="1.5" opacity=".6"/>`;
+    else s+=`<path d="M${cx-g.tw/2-5} ${g.top+2} q0 -14 ${g.tw/2+5} -16 q${g.tw/2+5} 2 ${g.tw/2+5} 16 z" fill="#f4f1ec" stroke="#2a1c12" stroke-opacity=".5" stroke-width="2"/><ellipse cx="${cx+14}" cy="${g.top-8}" rx="6" ry="2.5" fill="#3b2416"/>`;}
+  return s;
+}
+function drawCupOld(){
   const svg=$('#cupSvg');
   if(!B||!B.cup){svg.innerHTML=`<rect x="10" y="232" width="180" height="10" rx="4" fill="#a37c55" opacity=".35"/><text x="100" y="140" text-anchor="middle" font-size="14" fill="currentColor" opacity=".45">컵을 꺼내주세요</text>`;return;}
   const g={HOT:{top:70,tw:128,bw:96},ESP:{top:160,tw:70,bw:54},'20':{top:58,tw:140,bw:102},'24':{top:38,tw:146,bw:104},'32':{top:14,tw:152,bw:106}}[B.cup];
@@ -1270,10 +1367,11 @@ const TABS=[['컵','🥤'],['에스프레소','☕'],['얼음','🧊'],['액상'
 function renderPanel(){
   renderStations();
   const P=$('#panel');if(!P||!B)return;const T=B.tab;
-  const tgtBar=(allowed)=>`<div class="tgtbar">넣을 곳: ${allowed.map(t=>`<button class="chip ${B.target===t?'on':''}" data-settg="${t}">${TGT_ICON[t]} ${t}</button>`).join('')}</div>`;
+  const TGT_HELP={'컵':'대부분은 컵에 바로 넣어요','샷잔':'ICE 시럽 라떼·꿀/연유 메뉴: 샷잔에 먼저 담고 그 위로 추출','블렌더':'스무디·프라페·주스·블렌더 라떼','계량컵':'ICE 티(온수+티백)·HOT 콜드브루 원액'};
+  const tgtBar=()=>B.target==='컵'?`<div class="ctxbar plain">🥤 컵에 바로 넣어요</div>`:'';
   let h='';
   if(T==='컵'){
-    h=`<h4>컵 꺼내기</h4><div class="pgrid">${['HOT','20','24','32','ESP'].map(c=>`<button class="pbtn ${B.cup===c?'go':''}" data-cup="${c}"><span style="font-size:20px">${c==='HOT'?'☕':c==='ESP'?'🍵':'🥤'}</span>${CUPS[c]}</button>`).join('')}</div>
+    h=`<h4>컵 꺼내기</h4><div class="pgrid">${['HOT','20','24','32','ESP'].map(c=>`<button class="pbtn ${B.cup===c?'go':''}" data-cup="${c}"><svg viewBox="-10 0 220 250" style="width:46px;height:56px">${cupArt(c,{id:'cp'+c})}</svg>${CUPS[c]}</button>`).join('')}</div>
     <h4>에스프레소잔</h4><div class="pgrid"><button class="pbtn" data-tool="예열|잔 예열">잔 예열</button></div>
     <p class="muted small">ICE 컵에는 라인이 그려져 있어요. 설정에서 라인 이름 표시를 끌 수 있어요.</p>`;
   }else if(T==='에스프레소'){
@@ -1285,18 +1383,28 @@ function renderPanel(){
   }else if(T==='액상'){
     h=tgtBar(['컵','블렌더','계량컵'])+`<h4>액상 (텀블러)</h4><div class="pgrid">${LIQS.map(l=>`<button class="pbtn" data-liq="${l}"><span class="dot" style="background:${colOf(l)}"></span>${l}</button>`).join('')}</div>`;
   }else if(T==='재료'){
-    h=tgtBar(['컵','샷잔','블렌더','계량컵'])+`<div class="subtabs">${SHELVES.map(s=>`<button class="chip ${B.shelf===s?'on':''}" data-shelf="${s}">${s}</button>`).join('')}</div>
-    <div class="pgrid">${Object.keys(ITEMS).filter(k=>ITEMS[k].shelf===B.shelf).map(k=>`<button class="pbtn" data-ing="${esc(k)}"><span class="dot" style="background:${colOf(k)}"></span>${esc(k)}<small>${ITEMS[k].u==='amt'?'계량':UNIT_LABEL[ITEMS[k].u]}</small></button>`).join('')}</div>`;
+    const o=activeOrder();const need=o&&(B.showNeed||B.hint)?o.rec.ing:null;
+    const SHELF_LABEL={'시럽':'🧴 시럽 (펌프 P)','퓨레·소스':'🍋 퓨레·소스 (펌프 P)','파우더':'🥄 파우더·꿀·연유 (래들)','청·티백':'🍵 청 (청래들) · 티백','베이스':'🫙 베이스 (선/ml 계량)','과일·기타':'🍓 과일·기타'};
+    h=tgtBar(['컵','샷잔','블렌더','계량컵'])+`<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><input class="search" id="ingQ" placeholder="🔎 재료 이름 검색 (예: 바닐라)" autocomplete="off">
+      ${G&&G.mode==='practice'?`<button class="chip ${B.showNeed?'on':''}" data-shneed style="white-space:nowrap">👀 정답 재료</button>`:''}</div>
+    ${SHELVES.map(s=>`<div class="shelf" data-shelfbox><h4>${SHELF_LABEL[s]}</h4><div class="pgrid">${Object.keys(ITEMS).filter(k=>ITEMS[k].shelf===s).map(k=>`<button class="pbtn ${need&&need[k]!==undefined?'need':''}" data-ing="${esc(k)}" data-name="${esc(k)}"><span class="dot" style="background:${colOf(k)}"></span>${esc(k)}${B.c.ing[k]!==undefined?`<small class="have">넣음 ${typeof B.c.ing[k]==='number'?fmtNum(B.c.ing[k]):B.c.ing[k]}</small>`:''}</button>`).join('')}</div></div>`).join('')}`;
   }else if(T==='스팀'){
-    h=`<h4>스팀피처</h4><div class="pgrid"><button class="pbtn go wide" data-steam>♨️ 피처에 우유 담고 스팀하기<small>양 계량 → 스팀 온도 맞추기</small></button></div>
-    <h4>스팀피처 붓기</h4><div class="pgrid"><button class="pbtn" data-pourpit>🥛 우유 붓기</button><button class="pbtn" data-foam>☁️ 거품 올리기</button></div>
-    <h4>우유거품기 (ICE 카푸치노·카라멜마끼아또)</h4><div class="pgrid"><button class="pbtn" data-froth>우유거품기 작동<small>우유 200ml</small></button><button class="pbtn" data-pourfroth>거품 2서빙스푼<small>40g</small></button></div>`;
+    h=`<p class="muted small" style="margin-top:0">HOT 라떼·HOT 논커피 라떼에 쓰는 곳이에요. <b>우유 양만 고르면</b> 스팀해서 컵에 부어줘요.</p>
+    <div class="pgrid"><button class="pbtn go wide" data-steam>♨️ 스팀우유 붓기<small>우유 양 고르기</small></button>
+      <button class="pbtn" data-foam>☁️ 거품 얹기<small>HOT 고구마·곡물라떼</small></button></div>
+    <h4>ICE 카푸치노 · ICE 카라멜마끼아또 전용</h4><div class="pgrid"><button class="pbtn" data-froth>① 우유거품기 돌리기<small>맨 처음에!</small></button><button class="pbtn" data-pourfroth>② 거품 올리기<small>2서빙스푼</small></button></div>`;
   }else if(T==='블렌더'){
-    h=`<div class="pgrid"><button class="pbtn blue wide" data-settg="블렌더">🌀 블렌더에 담기<small>넣을 곳 = 블렌더 (얼음·액상·재료)</small></button></div>
-    <h4>믹싱 버튼</h4><div class="pgrid">${['1번','3번','3번(5초)'].map(b=>`<button class="pbtn" data-mix="${b}">${b}</button>`).join('')}</div>
-    <h4>붓기</h4><div class="pgrid"><button class="pbtn go wide" data-pourbl>블렌더 → 컵 부어주기<small>${esc(contentStr(B.bl)||'비어있음')}</small></button></div>`;
+    h=`<div class="jarbox">🌀 블렌더 안: <b>${esc(contentStr(B.bl)||'비어있음')}</b>${jobRunning('믹싱')?' · <span class="busy">갈는 중…</span>':''}</div>
+    <h4>① 블렌더에 담기</h4><div class="pgrid">
+      <button class="pbtn blue" data-blin="액상">🥛 우유·물<small>ml 계량</small></button>
+      <button class="pbtn blue" data-blin="재료">🍯 재료<small>파우더·베이스</small></button>
+      <button class="pbtn blue" data-blice>🧊 얼음<small>스무디·프라페</small></button></div>
+    <h4>② 갈기 (버튼 고르기)</h4><div class="pgrid">${['1번','3번','3번(5초)'].map(b=>`<button class="pbtn" data-mix="${b}">${b} 버튼</button>`).join('')}</div>
+    <h4>③ 컵에 붓기</h4><div class="pgrid"><button class="pbtn go wide" data-pourbl>🌀 → 🥤 블렌더를 컵에 부어주기</button></div>
+    <p class="muted small">💡 스무디·프라페는 얼음도 블렌더에! 주스·블렌더 라떼(ICE 곡물·토피넛·고구마·로얄밀크티)는 얼음을 <b>컵</b>에 먼저 담아두고 부어요. 컵은 '컵' 작업대에서 꺼내요.</p>`;
   }else if(T==='티·도구'){
-    h=`<h4>계량컵 (티 우리기 · 콜드브루 원액)</h4><div class="pgrid"><button class="pbtn blue" data-settg="계량컵">🧪 계량컵에 담기</button><button class="pbtn" data-steep>⏱ 3분 우리기</button><button class="pbtn go" data-pourmc>계량컵 → 컵</button></div>
+    h=`<div class="jarbox">🧪 계량컵 안: <b>${esc(contentStr(B.mc)||'비어있음')}</b>${jobRunning('우리기')?' · <span class="busy">우리는 중…</span>':''}</div>
+    <h4>계량컵 (ICE 티 · HOT 콜드브루 원액)</h4><div class="pgrid"><button class="pbtn blue" data-mcin="액상">💧 온수 넣기</button><button class="pbtn blue" data-mcin="재료">🍵 티백·원액 넣기</button><button class="pbtn" data-steep>⏱ 3분 우리기</button><button class="pbtn go" data-pourmc>🧪 → 🥤 컵에 붓기</button></div>
     <h4>도구</h4><div class="pgrid">
       <button class="pbtn" data-tool="섞음|바스푼으로 섞기">🥄 섞기</button>
       <button class="pbtn" data-tool="돌리기|컵 돌려주기(코팅)">🔄 컵 돌려주기<small>흑당 8부선·블루베리</small></button>
@@ -1321,7 +1429,14 @@ function renderPanel(){
   P.innerHTML=h;
   const on=(sel,fn)=>P.querySelectorAll(sel).forEach(b=>b.onclick=()=>fn(b));
   on('[data-settg]',b=>setTarget(b.dataset.settg));
-  on('[data-sgfill]',()=>{B.target='샷잔';openStation('재료');});
+  on('[data-sgfill]',()=>openStation('재료',{target:'샷잔',back:'에스프레소'}));
+  on('[data-blin]',b=>openStation(b.dataset.blin,{target:'블렌더',back:'블렌더'}));
+  on('[data-mcin]',b=>openStation(b.dataset.mcin,{target:'계량컵',back:'티·도구'}));
+  on('[data-blice]',()=>{B.target='블렌더';B.back='블렌더';scoopGame();});
+  on('[data-shneed]',()=>{B.showNeed=!B.showNeed;renderPanel();});
+  const iq=P.querySelector('#ingQ');if(iq){if(B.ingQ){iq.value=B.ingQ;}
+    const filt=()=>{const q=iq.value.trim();B.ingQ=q;P.querySelectorAll('[data-shelfbox]').forEach(sb=>{let any=false;sb.querySelectorAll('[data-name]').forEach(b=>{const ok=!q||b.dataset.name.includes(q);b.style.display=ok?'':'none';if(ok)any=true;});sb.style.display=any?'':'none';});};
+    iq.oninput=filt;filt();}
   on('[data-cup]',b=>{const had=B.cup;doCup(b.dataset.cup);if(B.cup===b.dataset.cup&&!had)closeModal();else renderPanel();});
   on('[data-shot]',b=>doExtract(+b.dataset.shot));
   on('[data-pourshot]',()=>{pourShot();renderPanel();});
@@ -1332,7 +1447,7 @@ function renderPanel(){
   on('[data-liq]',b=>liquidSheet(b.dataset.liq));
   on('[data-shelf]',b=>{B.shelf=b.dataset.shelf;renderPanel();});
   on('[data-ing]',b=>ingSheet(b.dataset.ing));
-  on('[data-steam]',()=>steamPick());
+  on('[data-steam]',()=>steamPour());
   on('[data-pourpit]',()=>pourPitcher());
   on('[data-foam]',()=>topFoam());
   on('[data-froth]',()=>makeFroth());
@@ -1358,6 +1473,10 @@ function judgeIce(f,tg){if(f<.38)return '조금';if(f<.6)return '반컵';if(f<.7
 
 function cupGeom(cup){return {HOT:{top:70,tw:128,bw:96},ESP:{top:160,tw:70,bw:54},'20':{top:58,tw:140,bw:102},'24':{top:38,tw:146,bw:104},'32':{top:14,tw:152,bw:106}}[cup];}
 function miniCup(cup,{level=0,col='#cfe6f5',iceF=0,foam=0,base=null}={}){
+  const layers=[];if(base&&base.f>0)layers.push({f:base.f,col:base.col});if(level>(base?base.f:0))layers.push({f:level,col});
+  return cupArt(cup,{layers,iceF,labels:true,id:'minic',top:B?B.c.top:{}});
+}
+function miniCupOld(cup,{level=0,col='#cfe6f5',iceF=0,foam=0,base=null}={}){
   const g=cupGeom(cup),bot=232,h=bot-g.top,cx=100;const X=(f,s)=>cx+s*(g.bw+(g.tw-g.bw)*Math.min(f,1))/2;const Y=f=>bot-f*h;
   const poly=`${X(1,-1)},${g.top} ${X(1,1)},${g.top} ${X(0,1)},${bot} ${X(0,-1)},${bot}`;
   let s=`<defs><clipPath id="mcc"><polygon points="${poly}"/></clipPath></defs><g clip-path="url(#mcc)">`;
@@ -1474,7 +1593,7 @@ function scoopGame(){
   const cup=tg==='컵'?B.cup:'20';if(cup==='HOT'||cup==='ESP')toast('HOT 컵에 얼음…? 🤔');
   const st={type:'scoop',f:tg==='컵'?B.c.iceF:0,n:0,spilled:false};const cap=tg==='컵'?1.03:1.2;
   st.draw=()=>{const svg=$('#mgSvg');if(svg)svg.innerHTML=miniCup(cup,{iceF:st.f,level:tg==='컵'?topF():0,col:B.c.layers.length?B.c.layers[B.c.layers.length-1].col:'#ccc'});};
-  st.commit=()=>{if(!st.n)return;doIce(judgeIce(st.f,tg),Math.min(st.f,1.2));};
+  st.commit=()=>{if(!st.n)return;doIce(judgeIce(st.f,tg),Math.min(st.f,1.2));goBack();};
   mgOpen(st,`<h3>🧊 얼음 푸기 → ${tg==='블렌더'?'계량컵(20oz)에 떠서 블렌더로':CUPS[cup]}</h3><p class="muted small" style="margin:0 0 6px">${tg==='블렌더'?'가득은 컵 윗선까지, 골드망고는 가득 + 컵밑선만큼 수북하게':'스쿱마다 양이 조금씩 달라요. 넘치면 흘려요!'}</p>
    <div class="mg-stage"><svg id="mgSvg" viewBox="0 0 200 250"></svg></div>
    <button class="hold" id="mgTap">🧊 스쿱으로 퍼 넣기</button>
@@ -1509,6 +1628,26 @@ function steamGame(){
   $('#mgDone').onclick=()=>mgFinish();
 }
 
+/* --- 스팀우유 붓기: 양만 고르면 스팀 + 붓기를 한 번에 --- */
+function steamPour(){
+  if(needCup())return;
+  let m='우유',temp=65;
+  const render=()=>{const box=$('#modalBox');box.querySelectorAll('[data-sm]').forEach(b=>b.classList.toggle('on',b.dataset.sm===m));box.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on',+b.dataset.st===temp));};
+  openModal(`<h3>♨️ 스팀우유 붓기</h3><p class="muted small" style="margin:0 0 8px">우유 양을 누르면 바로 스팀해서 부어줘요.</p>
+   <div class="sg-label">우유 양</div><div class="chips">${[200,225,250,275,300].map(x=>`<button class="chip big" data-sml="${x}">${x}ml</button>`).join('')}</div>
+   <details style="margin-top:12px"><summary class="small muted" style="cursor:pointer">우유 종류 · 온도 바꾸기 (꿀팁옵션 · 80℃ 메뉴)</summary>
+     <div class="sg-label">우유 종류</div><div class="chips">${['우유','아몬드밀크','오트밀크'].map(x=>`<button class="chip" data-sm="${x}">${x}</button>`).join('')}</div>
+     <div class="sg-label">온도</div><div class="chips"><button class="chip" data-st="65">기본 (65℃)</button><button class="chip" data-st="80">80℃ — 고구마라떼·콜드브루라떼</button></div></details>
+   <div class="row end" style="margin-top:12px"><button class="btn ghost" data-close>취소</button></div>`,{sheet:true,pause:false});
+  const box=$('#modalBox');
+  box.querySelectorAll('[data-sm]').forEach(b=>b.onclick=()=>{m=b.dataset.sm;render();});
+  box.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{temp=+b.dataset.st;render();});
+  box.querySelectorAll('[data-sml]').forEach(b=>b.onclick=()=>{const ml=+b.dataset.sml;closeModal();
+    const t=m==='우유'?'스팀우유':'스팀 '+m;
+    act('액상',`${t} ${ml}ml 붓기${temp!==65?` (${temp}℃)`:''}`,()=>{B.pit={m,ml:ml+'ml',temp,used:true};B.c.liq.push({t,a:ml+'ml'});B.c.steamTemp=temp;addVolume(ml,'#f3ead9');});
+    toast(`♨️ 치이익… ${t} ${ml}ml`);});
+  render();
+}
 /* --- 스팀 (우유 종류·양·온도 고르기) --- */
 function steamPick(){
   let m='우유',ml=null,temp=null;
@@ -1554,15 +1693,18 @@ function liquidSheet(t){
   const tg=B.target==='샷잔'?'컵':B.target;if(tg==='컵'&&needCup())return;
   const opts=tg==='컵'?[...(JUDGE_LINES[B.cup]||[]),...MLS]:MLS;
   pourPick({title:`${t} 붓기 → ${tg==='컵'?CUPS[B.cup]:tg}`,name:t,col:colOf(t),tg,opts,unit:'ml',
-    sub:tg==='컵'?'컵 선까지 붓거나, 계량해서 부어요 (온수 50ml·블렌더 우유는 계량!)':'계량컵으로 재서 넣어요',onDone:(label,info)=>doLiquid(t,label,info)});
+    sub:tg==='컵'?'컵 선까지 붓거나, 계량해서 부어요 (온수 50ml 같은 건 계량!)':`${tg}에 넣을 양을 골라요`,onDone:(label,info)=>{doLiquid(t,label,info);goBack();}});
 }
 function ingSheet(k){
   const it=ITEMS[k];const tg=B.target;if(tg==='컵'&&needCup())return;
-  const reopen=()=>{if(B&&G)setTimeout(()=>{if(!modalOpen())openStation('재료');},60);};
-  if(it.u==='P')return pumpGame(k,v=>{doIng(k,v);reopen();});
+  const reopen=()=>{if(!B||!G)return;const bk=B.back;setTimeout(()=>{if(!modalOpen())openStation(bk||'재료');},60);};
   if(it.u==='amt'){const unit=/g$/.test(it.opts[0])?'g':'ml';
     return pourPick({title:`${k} → ${tg}`,name:k,col:colOf(k),tg,opts:it.opts,unit,onDone:(label,info)=>{doIng(k,label,info);reopen();}});}
-  counterGame(k,v=>{doIng(k,v);reopen();});
+  // 펌프·래들·개수는 모두 같은 방식: 몇 번인지 누르기
+  const u=UNIT_LABEL[it.u];
+  const nums=it.u==='P'?[1,1.5,2,3,4,5,6,8]:it.u==='ea'?[1,2,3,4,5,10]:it.u==='래들'||it.u==='청래들'?[1,2,3,4,5,6]:[1,2,3];
+  const verb=it.u==='P'?'몇 펌프?':it.u==='래들'||it.u==='청래들'?'몇 '+u+'?':'몇 개?';
+  amountSheet(`${k} → ${TGT_ICON[tg]} ${tg}`,[{label:verb,opts:nums.map(v=>({v,label:fmtNum(v)+u}))}],v=>{doIng(k,v);if(it.u==='P')toast(`🧴 ${'칙'.repeat(Math.min(6,Math.ceil(v)))} ${fmtNum(v)}P`);reopen();},it.spec);
 }
 function amountSheet(title,groups,onPick,sub){
   openModal(`<h3>${esc(title)}</h3>${sub?`<p class="muted small" style="margin:0">${esc(sub)}</p>`:''}${groups.map((g,gi)=>`<div class="sg-label">${g.label}</div><div class="chips">${g.opts.map((o,oi)=>`<button class="chip big" data-g="${gi}" data-o="${oi}">${esc(o.label)}</button>`).join('')}</div>`).join('')}
@@ -1802,9 +1944,91 @@ function renderBook(root,inModal){
 }
 
 /* =====================================================================
+   TIPS — 규칙으로 묶어서 외우기
+   ===================================================================== */
+const inR=(a,b)=>r=>r.no>=a&&r.no<=b;
+const TIPS=[
+ {e:'🥤',t:'컵 크기 3종 정리',types:['cup'],pool:r=>r.cup!=='ESP'&&r.temp==='ICE',lines:[
+   '<b>24oz</b> = ICE 아메리카노류 · 에이드 전부 · ICE 티(아이스티 포함)',
+   '<b>20oz</b> = 라떼 · 스무디/프라페 · 주스 · 흑당 · 콜드브루 · 할메가커피',
+   '<b>32oz</b> = 이름에 <b>왕메가</b>가 붙거나 <b>메가리카노</b>, 왕할메가커피',
+   'HOT은 전부 HOT컵']},
+ {e:'☕',t:'샷은 기본 2샷',types:['shots'],pool:r=>r.cat==='커피'||r.cat==='꿀팁옵션'&&r.shots,lines:[
+   '거의 다 <b>2샷</b>',
+   '<b>3샷</b> = 메가리카노 · 왕메가헛개리카노 · 왕메가카페라떼 (32oz 커피)',
+   '<b>1샷</b> = 초코젤라또 말차라떼',
+   '할메가커피는 샷 없이 <b>베이스</b>로 만들어요']},
+ {e:'🧴',t:'시럽: HOT 3P · ICE 4P',types:['ing'],ingRe:/시럽|헛개|꿀|연유/,pool:r=>[4,5,6,7,10,11,12,13,17,18,19,20,21,24,25,26,27,32].includes(r.no),lines:[
+   '헤이즐넛·바닐라·카라멜 시럽: <b>HOT 3P / ICE 4P</b>',
+   '라이트바닐라(아몬드라떼)도 ICE <b>4P</b>',
+   '헛개베이스: HOT·ICE 모두 <b>3P</b>, 왕메가헛개는 <b>5P</b>',
+   '꿀·연유는 <b>2래들</b> = 샷잔 1/4선 → 샷잔에 먼저 담고 추출!']},
+ {e:'📏',t:'ICE 커피 선 위치',types:['liq','ice'],pool:r=>r.no>=15&&r.no<=32,lines:[
+   '아메리카노 <b>정수 9부</b> / 시럽 아메리카노 <b>8.5부</b>',
+   '카페라떼 <b>우유 8부</b>',
+   '시럽 라떼·연유라떼·큐브라떼·카페모카 <b>A선</b>',
+   '카푸치노·카라멜마끼아또 <b>B선</b> + 우유거품',
+   '얼음 <b>컵선</b> = 큐브라떼·카페모카·말차라떼·카푸치노·마끼아또 (나머지는 가득)']},
+ {e:'♨️',t:'스팀우유 양',types:['liq'],pool:r=>r.liq.some(l=>/^스팀/.test(l.t)),lines:[
+   'HOT 카페라떼 <b>275ml</b> (제일 많음)',
+   'HOT 카푸치노 <b>225ml</b> (거품이 많아서 적게)',
+   '그 외 HOT 라떼·초코·녹차 <b>250ml</b>',
+   '고구마·곡물라떼 <b>275ml</b> · 고구마라떼와 콜드브루라떼는 <b>80℃</b>']},
+ {e:'🍵',t:'차: HOT 티백 1개 · ICE 티백 2개',types:['ing','liq'],pool:inR(36,57),lines:[
+   'HOT 티(얼그레이·녹차·캐모마일·페퍼민트): 티백 <b>1개</b> + 온수 9부',
+   'ICE 티: 계량컵에 <b>온수 150ml + 티백 2개</b> → 3분 → 얼음 반컵 → 붓기 → 얼음 → 정수 가득',
+   '유자차·레몬차: HOT <b>5청래들</b> / ICE <b>6청래들</b> (+ 온수 50ml)',
+   '자몽차는 HOT·ICE 모두 <b>4청래들</b> (+ 슈가시럽 HOT 2P / ICE 1P)',
+   '사과유자차·유자생강차는 유자청 <b>4청래들</b>']},
+ {e:'🥛',t:'HOT 파우더 라떼',types:['ing','top','order'],pool:inR(61,66),lines:[
+   '녹차·로얄밀크티·핫초코·토피넛: 컵(파우더) → <b>온수 50ml</b> → 섞기 → 스팀우유',
+   '고구마·곡물: 온수 없이 컵(재료) → 스팀우유 → 섞기 → <b>거품</b>',
+   '녹차·홍차 <b>2래들</b> / 초코·토피넛·곡물 <b>4래들</b>',
+   '토핑: 녹차라떼 녹차파우더 · 핫초코 코코아파우더 · 토피넛 카라멜드리즐 · 고구마/곡물 아몬드슬라이스']},
+ {e:'🍋',t:'에이드는 24oz · 사이다 가득',types:['ing','liq','top'],pool:inR(76,83),lines:[
+   '전부 24oz · 얼음 가득 · <b>사이다 가득</b>',
+   '예외: 체리콜라는 <b>콜라</b>, 제로부스트는 <b>제로사이다</b>',
+   '레몬퓨레 <b>1.5P</b> · 청포도퓨레 <b>2P</b> · 자몽퓨레 <b>1P</b>',
+   '메가에이드·라임모히또는 <b>빻아주기</b> · 토핑은 대부분 애플민트']},
+ {e:'🌀',t:'블렌더 버튼 & 얼음 위치',types:['blend','order'],pool:r=>!!r.blend,lines:[
+   '주스 = <b>1번</b> (얼음 8부는 컵에)',
+   '스무디·프라페·블렌더 라떼 = <b>3번</b>',
+   '오레오초코라떼 = <b>3번(5초)</b>',
+   '스무디·프라페: 얼음도 <b>블렌더</b>에 / 블렌더 라떼(ICE 곡물·토피넛·고구마·로얄밀크티)·주스: 얼음은 <b>컵</b>에']},
+ {e:'🍓',t:'스무디·프라페 액상',types:['liq','ing'],pool:inR(84,101),lines:[
+   '플레인요거트·밀크쉐이크 <b>우유 200ml</b>',
+   '망고·딸기·블루베리 요거트, 민트프라페 <b>우유 150ml</b>',
+   '퐁크러쉬 = <b>우유 100ml + 쿠키베이스 150ml + 죠리퐁 1컵</b>',
+   '쿠키·리얼초코·녹차·커피 프라페는 우유 없이 <b>쿠키베이스</b>',
+   '골드망고·귤톡톡은 <b>물 150ml</b>']},
+ {e:'🔁',t:'제조순서 패턴 4개',types:['order'],pool:r=>[15,16,22,23,19,20,21,24,25,27,11,12,71,72,73,74,106,107,108,109].includes(r.no),lines:[
+   'ICE 기본: <b>추출 → 컵 → 얼음 → 액상 → 샷</b>',
+   'ICE 시럽: <b>샷잔(시럽) → 추출 → 얼음·액상 → 샷 → 섞음</b>',
+   'HOT 시럽 라떼: <b>추출 → 컵(시럽) → 스팀 → 샷 → 섞음 → 우유</b>',
+   '블렌더 라떼·주스: <b>블렌더 → 믹싱 → 컵(얼음) → 부어줌</b>']},
+ {e:'⚫',t:'흑당 · 콜드브루',types:['ing','liq','order'],pool:inR(102,113),lines:[
+   '흑당라떼 흑당베이스 <b>3P</b>, 나머지 흑당은 <b>2P</b>',
+   '흑당은 8부선까지 <b>컵 돌려주기</b> → 얼음 → 우유 가득',
+   '콜드브루 ICE: 원액 <b>컵밑선</b> → 얼음 → 정수/우유 가득 → 섞기',
+   '콜드브루 HOT: 원액 <b>100ml</b>를 계량컵으로 → 온수 9부 / 스팀우유 250']}
+];
+const CHECK2TYPE={컵:'cup',샷:'shots',얼음:'ice',액상:'liq',재료:'ing',토핑:'top',블렌더:'blend',순서:'order','스팀 온도':'liq'};
+function tipFor(r,res){
+  const bad=res.checks.filter(c=>!c.ok).map(c=>CHECK2TYPE[c.name]).filter(Boolean);
+  const t=TIPS.find(t=>t.pool(r)&&t.types.some(x=>bad.includes(x)))||(bad.length?TIPS.find(t=>t.pool(r)):null);
+  return t?`<div class="tipbox"><b>🍯 꿀팁 · ${esc(t.t)}</b><ul>${t.lines.map(l=>`<li>${l}</li>`).join('')}</ul></div>`:'';
+}
+function renderTips(){
+  $('#tipRoot').innerHTML=TIPS.map((t,i)=>`<div class="tip"><h3><span class="e">${t.e}</span>${esc(t.t)}</h3><ul>${t.lines.map(l=>`<li>${l}</li>`).join('')}</ul>
+    <div class="row"><button class="btn primary" data-tq="${i}">이 꿀팁 퀴즈 5문제</button><span class="muted small">메뉴 ${RECIPES.filter(t.pool).length}개</span></div></div>`).join('');
+  document.querySelectorAll('[data-tq]').forEach(b=>b.onclick=()=>{const t=TIPS[+b.dataset.tq];startQuiz(null,{tip:t,n:5});});
+}
+$('#tipAll').onclick=()=>startQuiz(null,{tipsAll:true,n:10});
+
+/* =====================================================================
    QUIZ
    ===================================================================== */
-let QZ=null;
+let QZ=null,QZ_ING_RE=null;
 function uniqOpts(ans,cands,n=3){const out=[];shuffle(cands).forEach(c=>{if(c!==ans&&!out.includes(c)&&out.length<n)out.push(c);});return out.length===n?shuffle([ans,...out]):null;}
 function summaryOf(r){return `${CUPS[r.cup]} · ${shotStr(r.shots)} · 얼음 ${r.ice||'없음'}${r.blend?' · 블렌더 '+r.blend:''} · 액상 ${liqStr(r)} · 재료 ${ingStr(r)} · 토핑 ${topStr(r.top)}`;}
 function makeQ(t,r,pool){
@@ -1816,7 +2040,7 @@ function makeQ(t,r,pool){
   if(t==='liq'){const ans=liqStr(r);const l=r.liq[0];const pool2=(LINES.includes(l.a)?LINES:MLS).filter(v=>v!==l.a);
     const cands=shuffle(pool2).slice(0,6).map(v=>liqStr({liq:[{...l,a:v,n:''},...r.liq.slice(1)]}));
     const o=uniqOpts(ans,cands);return o&&{r,q:`${nm} — 액상은?`,opts:o,ans};}
-  if(t==='ing'){const ks=Object.keys(r.ing);if(!ks.length)return null;const k=pick(ks);const v=r.ing[k];const it=ITEMS[k];
+  if(t==='ing'){const ks=Object.keys(r.ing).filter(k=>!QZ_ING_RE||QZ_ING_RE.test(k));if(!ks.length)return null;const k=pick(ks);const v=r.ing[k];const it=ITEMS[k];
     const ans=itemStr(k,v,r.ingN[k]);let cands;
     if(typeof v==='number'){const st=it.u==='P'?[.5,1,2,-1,3,-.5]:[1,2,-1,3,-2];cands=st.map(d=>v+d).filter(x=>x>0).map(x=>itemStr(k,x));}
     else cands=it.opts.filter(o=>o!==v).map(o=>itemStr(k,o));
@@ -1827,30 +2051,37 @@ function makeQ(t,r,pool){
     const o=uniqOpts(ans,others);return o&&{r,q:`이 레시피의 메뉴는?\n${summaryOf(r)}`,opts:o,ans};}
   return null;
 }
-function genQuestion(pool){
-  for(let i=0;i<30;i++){const r=weightedPick(pool);const ts=['order','name'];
-    if(r.cup!=='ESP')ts.push('cup');if(r.cat==='커피')ts.push('shots');if(r.liq.length)ts.push('liq','liq');if(Object.keys(r.ing).length)ts.push('ing','ing','ing');
+function genQuestion(pool,allowed){
+  for(let i=0;i<40;i++){let p=pool,types=allowed,tipT=null;
+    if(QZ&&QZ.opt&&QZ.opt.tipsAll){tipT=pick(TIPS);p=RECIPES.filter(tipT.pool);types=tipT.types;}
+    QZ_ING_RE=(tipT&&tipT.ingRe)||(QZ&&QZ.opt&&QZ.opt.tip&&QZ.opt.tip.ingRe)||null;
+    const r=weightedPick(p);let ts=['order','name'];
+    if(r.cup!=='ESP')ts.push('cup');if(r.cat==='커피'||r.shots)ts.push('shots');if(r.liq.length)ts.push('liq','liq');if(Object.keys(r.ing).length)ts.push('ing','ing','ing');
     if(Object.keys(r.top).length)ts.push('top');if(r.cup!=='HOT'&&r.cup!=='ESP')ts.push('ice');if(r.blend)ts.push('blend');
-    const q=makeQ(pick(ts),r,pool);if(q)return q;}
+    if(types){ts=ts.filter(t=>types.includes(t));if(!ts.length)continue;}
+    const q=makeQ(pick(ts),r,p);if(q){if(tipT)q.tip=tipT;return q;}}
+  QZ_ING_RE=null;
   return makeQ('cup',RECIPES[2],RECIPES);
 }
-function startQuiz(cats){
-  const pool=poolFor(cats&&cats.length?'all':'all',cats);
-  QZ={pool,i:0,n:10,ok:0,wrong:[],cur:null,cats};show('quiz');nextQ();
+function startQuiz(cats,opt={}){
+  const pool=opt.tip?RECIPES.filter(opt.tip.pool):poolFor('all',cats);
+  QZ={pool,i:0,n:opt.n||10,ok:0,wrong:[],cur:null,cats,opt,types:opt.tip?opt.tip.types:null,
+    title:opt.tip?`${opt.tip.e} ${opt.tip.t}`:opt.tipsAll?'🍯 꿀팁 랜덤 퀴즈':''};show('quiz');nextQ();
 }
 function nextQ(){
   if(QZ.i>=QZ.n)return quizEnd();
-  QZ.cur=genQuestion(QZ.pool);QZ.answered=false;const q=QZ.cur;
-  $('#quizRoot').innerHTML=`<div class="qhead"><button class="btn" id="qzQuit">← 그만</button><b>${QZ.i+1} / ${QZ.n}</b><span class="muted">정답 ${QZ.ok}</span></div>
+  QZ.cur=genQuestion(QZ.pool,QZ.types);QZ.answered=false;const q=QZ.cur;
+  const tip=q.tip||(QZ.opt&&QZ.opt.tip);
+  $('#quizRoot').innerHTML=`<div class="qhead"><button class="btn" id="qzQuit">← 그만</button><b>${QZ.title?esc(QZ.title)+' · ':''}${QZ.i+1} / ${QZ.n}</b><span class="muted">정답 ${QZ.ok}</span></div>
    <div class="pbar2" style="margin-bottom:12px"><i style="width:${QZ.i/QZ.n*100}%"></i></div>
-   <div class="card qcard"><div class="qq">${tempBadge(q.r)} ${esc(q.q).replace(/\n/g,'<br><span class="muted small" style="font-weight:600">')}</div>
+   <div class="card qcard"><div class="qq">${esc(q.q).replace(/\n/g,'<br><span class="muted small" style="font-weight:600">')}</div>
    <div class="qopts">${q.opts.map((o,i)=>`<button class="qopt" data-i="${i}">${esc(o)}</button>`).join('')}</div><div id="qExp"></div></div>`;
   $('#qzQuit').onclick=()=>goHome();
   const bs=[...document.querySelectorAll('#quizRoot .qopt')];
   bs.forEach(b=>b.onclick=()=>{if(QZ.answered)return;QZ.answered=true;const ok=q.opts[b.dataset.i]===q.ans;
     bs.forEach(x=>{if(q.opts[x.dataset.i]===q.ans)x.classList.add('right');});if(!ok){b.classList.add('wrong');QZ.wrong.push(q.r.no);}else QZ.ok++;
     sfx(ok?'ok':'bad');const s=stat(q.r.no);if(!ok){s.wrong++;s.streak=0;}persist();
-    $('#qExp').innerHTML=`<p style="margin:12px 0 6px">${ok?'⭕ 정답!':'❌ 정답은: <b>'+esc(q.exp||q.ans)+'</b>'}</p><details><summary class="small muted" style="cursor:pointer">레시피 카드</summary>${recCard(q.r)}</details><div class="row end" style="margin-top:10px"><button class="btn primary" id="qNext">다음 →</button></div>`;
+    $('#qExp').innerHTML=`<p style="margin:12px 0 6px">${ok?'⭕ 정답!':'❌ 정답은: <b>'+esc(q.exp||q.ans)+'</b>'}</p>${tip&&!ok?`<div class="tipbox"><b>🍯 ${esc(tip.t)}</b><ul>${tip.lines.map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}<details><summary class="small muted" style="cursor:pointer">레시피 카드</summary>${recCard(q.r)}</details><div class="row end" style="margin-top:10px"><button class="btn primary" id="qNext">다음 →</button></div>`;
     $('#qNext').onclick=()=>{QZ.i++;nextQ();};});
 }
 function quizEnd(){
@@ -1861,7 +2092,7 @@ function quizEnd(){
   <div class="row" style="justify-content:center;margin-top:14px">${w.length?'<button class="btn" id="qzRev">🧪 틀린 메뉴 만들어보기</button>':''}<button class="btn" id="qzHome">메인</button><button class="btn primary" id="qzAgain">한 번 더</button></div></div>`;
   document.querySelectorAll('#quizRoot [data-rno]').forEach(b=>b.onclick=()=>showRecipe(BYNO[b.dataset.rno],true));
   const rv=$('#qzRev');if(rv)rv.onclick=()=>startPractice({only:w,label:'퀴즈 오답'});
-  $('#qzHome').onclick=()=>goHome();$('#qzAgain').onclick=()=>startQuiz(QZ.cats);
+  $('#qzHome').onclick=()=>goHome();$('#qzAgain').onclick=()=>startQuiz(QZ.cats,QZ.opt);
 }
 function quizSetup(){
   let sel=[];
@@ -1908,8 +2139,8 @@ function showHelp(){
   openModal(`<h2>❓ 이렇게 일해요</h2><ol style="line-height:1.75;padding-left:20px">
    <li>카운터 앞 <b>손님</b>을 눌러 주문을 골라요. 말풍선 아래 막대가 손님 인내심이에요. 여러 잔을 번갈아 만들 수도 있어요.</li>
    <li>아래 <b>작업대</b>(컵·머신·제빙기·냉장고·시럽·스팀·블렌더·티·토핑·포장)를 <b>실제 매장 순서대로</b>눌러요. 누른 순서 그대로 <b>제조순서</b>가 채점돼요.</li>
-   <li><b>넣을 곳</b>(🥤컵 / 🥃샷잔 / 🌀블렌더 / 🧪계량컵)을 먼저 고르고 재료를 넣어요.<br><span class="muted small">예) ICE 바닐라라떼: 샷잔 선택 → 바닐라시럽 4P → 2샷 추출 → 컵 선택 → 20oz 컵 → 얼음 가득 → 우유 A선 → 샷잔→컵 붓기 → 섞기</span></li>
-   <li>액상·베이스는 <b>어느 선까지(A선, 8부…) 또는 몇 ml</b>인지 고르면 자동으로 부어줘요. 시럽은 <b>펌프를 누른 횟수</b>만큼(½P 버튼도 있어요). 얼음은 <b>스쿱으로 눈대중</b> — 넘치면 💦흘리고, 행주로 안 닦으면 감점!</li>
+   <li>재료·우유·얼음은 기본으로 <b>컵에 바로</b> 들어가요. 블렌더 음료는 <b>블렌더</b> 작업대에서 ① 담기 → ② 갈기 → ③ 컵에 붓기. 시럽을 샷잔에 넣을 땐 <b>머신</b> 작업대의 '샷잔에 시럽 넣기'.<br><span class="muted small">예) ICE 바닐라라떼: 머신 → 샷잔에 시럽 넣기 → 바닐라시럽 4P → 2샷 추출 → 컵(20oz) → 제빙기(가득) → 냉장고(우유 A선) → 머신(샷잔→컵) → 티·도구(섞기)</span></li>
+   <li>액상·베이스는 <b>어느 선까지(A선, 8부…) 또는 몇 ml</b>인지 고르면 자동으로 부어줘요. 시럽은 <b>몇 펌프</b>인지 고르면 돼요. 얼음은 <b>스쿱으로 눈대중</b> — 넘치면 💦흘리고, 행주로 안 닦으면 감점!</li>
    <li>샷 추출·블렌더·티 우리기는 <b>시간이 걸려요</b>. 기다리는 동안 얼음·우유를 준비하세요. 머신은 2그룹! 추출한 샷을 60초 넘게 두면 크레마가 죽어요.</li>
    <li>HOT 라떼류는 <b>스팀</b>: 우유 종류·양·온도(기본 65℃, 고구마라떼·콜드브루라떼는 80℃)를 고르고 → 우유 붓기.</li>
    <li>포장은 <b>뚜껑</b>, 배달은 <b>뚜껑 + 캐리어·봉투</b>까지!</li>
@@ -1939,6 +2170,7 @@ function goHome(){G=null;B=null;closeModal();renderMenu();show('menu');}
 $('#mStart').onclick=()=>startShift();
 $('#mPractice').onclick=()=>practiceSetup();
 $('#mQuiz').onclick=()=>quizSetup();
+$('#mTips').onclick=()=>{show('tips');renderTips();};
 $('#mBook').onclick=()=>{show('book');renderBook($('#bookRoot'),false);};
 $('#mClose').onclick=()=>startClosing(true);
 $('#mSettings').onclick=()=>settingsModal();
