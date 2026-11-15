@@ -188,6 +188,7 @@ input,select{font:inherit}
 .ck.bad{background:var(--bad-bg)}
 .ck .m{font-weight:900}
 .ck.ok .m{color:var(--ok)}.ck.bad .m{color:var(--bad)}
+.ck.mid{background:var(--warn-bg)}.ck.mid .m{color:var(--warn)}
 .ck .d div{line-height:1.35}
 .ck .d .ex{font-weight:700}
 .ck .d .gt{color:var(--muted)}
@@ -952,6 +953,12 @@ function trash(){if(!B)return;const o=activeOrder();if(!o)return;
 /* =====================================================================
    GRADE
    ===================================================================== */
+function lcsLen(a,b){const d=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]+1:Math.max(d[i-1][j],d[i][j-1]);return d[a.length][b.length];}
+function ckRow(c){
+  if(c.name==='순서'){const L={완벽:['ok','✔','완벽해요! 👏'],그럭저럭:['mid','△','그럭저럭 👍 (통과)'],아쉬워요:['bad','✘','아쉬워요 😅']}[c.level];
+    return `<div class="ck ${L[0]}"><span class="m">${L[1]}</span><b>순서</b><div class="d"><div class="ex">${L[2]}</div>${c.level!=='완벽'?`<div>정답: ${esc(c.exp)}</div><div class="gt">내가: ${esc(c.got)}</div>`:''}</div></div>`;}
+  return `<div class="ck ${c.ok?'ok':'bad'}"><span class="m">${c.ok?'✔':'✘'}</span><b>${c.name}</b><div class="d">${c.ok?`<div>${esc(c.exp)}</div>`:`<div class="ex">정답: ${esc(c.exp)}</div><div class="gt">내가: ${esc(c.got)}</div>`}</div></div>`;}
 function isSubseq(need,have){let i=0;for(const t of have){if(t===need[i])i++;if(i===need.length)return true;}return need.length===0;}
 function cmpMap(exp,got){
   const keys=[...new Set([...Object.keys(exp),...Object.keys(got)])];const diffs=[];
@@ -977,14 +984,17 @@ function grade(r,b,extra,type){
   add('토핑',!dt.length,topStr(r.top),dt.length?dt.join(' / '):'정확',1);
   if(r.blend||b.blend)add('블렌더',r.blend===b.blend,r.blend?r.blend+' 버튼':'사용 안 함',b.blend?b.blend+' 버튼':'사용 안 함',1);
   const have=collapse(b.tokens);
-  add('순서',isSubseq(r.toks,have),r.text,b.log.join(' → ')||'없음',1);
+  // 순서는 3단계: 완벽 / 그럭저럭(대부분 맞음, 통과) / 아쉬워요
+  const ratio=r.toks.length?lcsLen(r.toks,have)/r.toks.length:1;
+  const lvl=ratio>=1?'완벽':ratio>=.5?'그럭저럭':'아쉬워요';
+  C.push({name:'순서',ok:ratio>=.5,level:lvl,credit:ratio>=1?1:ratio>=.5?.7:0,exp:r.text,got:b.log.join(' → ')||'없음',w:1});
   const left=[];if(b.sg.shots||Object.keys(b.sg.ing).length)left.push('샷잔');if(!blEmpty(b.bl))left.push('블렌더');if(b.mc.liq.length||Object.keys(b.mc.ing).length)left.push('계량컵');
   if((b.jobs||[]).length)left.push('작업 중인 기계');
   add('마무리',!left.length,'남은 재료 없음',left.length?left.join(', ')+'에 재료가 남아있음':'깔끔',.5);
   add('청결',!b.spill,'흘린 곳 없음 (흘렸으면 행주로 닦기)',b.spill?'카운터에 흘린 채로 냄 💦':'깨끗',.5);
   if(type==='포장'||type==='배달'){const need=type==='배달'?'뚜껑 + 캐리어·봉투':'뚜껑';const ok=b.lid&&(type!=='배달'||b.bag);
     add('포장',ok,need,[b.lid?'뚜껑':'',b.bag?'봉투':''].filter(Boolean).join(' + ')||'포장 안 함',.5);}
-  const tw=C.reduce((a,c)=>a+c.w,0),gw=C.reduce((a,c)=>a+(c.ok?c.w:0),0);
+  const tw=C.reduce((a,c)=>a+c.w,0),gw=C.reduce((a,c)=>a+(c.ok?c.w*(c.credit??1):0),0);
   let pct=Math.round(gw/tw*100);
   const core=C.filter(c=>['컵','샷','얼음','액상','재료'].includes(c.name)).every(c=>c.ok);
   let verdict=C.every(c=>c.ok)?'perfect':(pct>=80&&core?'ok':(pct>=85?'ok':'fail'));
@@ -1083,7 +1093,7 @@ function serve(){
   const em={perfect:'🤩',ok:'🙂',fail:'😣'}[res.verdict];
   const title={perfect:'완벽해요! 레시피 그대로!',ok:'아쉽지만 통과',fail:'다시 만들어야 해요'}[res.verdict];
   const html=`<div class="verdict"><div class="em">${em}</div><div><b>${title} (${res.pct}점)</b><span class="muted small">${tempBadge(r)} ${esc(r.name)}${o.extra?' · 샷추가':''}${usedHint?' · 💡힌트 사용':''}</span>${line?`<div class="small">${line}</div>`:''}${money}</div></div>
-   <div class="checks">${res.checks.map(c=>`<div class="ck ${c.ok?'ok':'bad'}"><span class="m">${c.ok?'✔':'✘'}</span><b>${c.name}</b><div class="d">${c.ok?`<div>${esc(c.name==='순서'?'순서 OK':c.exp)}</div>`:`<div class="ex">정답: ${esc(c.exp)}</div><div class="gt">내가: ${esc(c.got)}</div>`}</div></div>`).join('')}</div>
+   <div class="checks">${res.checks.map(ckRow).join('')}</div>
    ${res.verdict!=='perfect'?tipFor(r,res):''}
    <details ${res.verdict==='perfect'?'':'open'}><summary class="small muted" style="cursor:pointer;margin-bottom:6px">📋 레시피 카드 보기</summary>${recCard(r)}</details>
    <div class="row end" style="margin-top:12px">${G.mode==='practice'?`<button class="btn" id="rsRetry">같은 메뉴 다시</button><button class="btn primary" id="rsNext">다음 메뉴 →</button>`:`<button class="btn primary" id="rsNext">${res.verdict==='fail'?'다시 만들기':'다음 손님'}</button>`}</div>`;
